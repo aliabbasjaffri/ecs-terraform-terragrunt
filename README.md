@@ -37,7 +37,7 @@ __NOTE__: These instructions are for Linux
 
 ## Infrastructure deployment and testing
 - Please configure your `aws` credentials by running `aws configure` after installing the cli utility.
-- After that, please cd into the `challenge-full-stack-platform/terragrunt/` folder, and execute, `terragrunt run-all apply` command. `terragrunt` with the help of `terraform` would detect that the configuration was never applied and would print out a plan of deployment. Please enter `y` followed by enter to proceed. It will take few minutes for the entire deployment to be complete.
+- After that, please cd into the `terragrunt/` folder, and execute, `terragrunt run-all apply` command. `terragrunt` with the help of `terraform` would detect that the configuration was never applied and would print out a plan of deployment. Please enter `y` followed by enter to proceed. It will take few minutes for the entire deployment to be complete.
 - The application load balancer DNS name acts as a test-endpoint for the deployment. The DNS endpoint, `alb_url`, is emitted as an output during the `aws_alb` deployment.
 - Please copy the DNS endpoint and enter it in a browser, followed by the port, `80` in the format, `alb_url:80`.
 
