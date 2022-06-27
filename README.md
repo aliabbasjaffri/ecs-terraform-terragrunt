@@ -2,7 +2,7 @@
 This repository contains terraform code to deploy a simple ghost api container on ECS Fargate cluster with an application load balancer and autoscaling group
 
 ## Methodology
-- I am solving this challenge using [terraform](https://www.terraform.io/) and [terragrunt](https://terragrunt.gruntwork.io/) for expressing the infrastructure resources in AWS cloud.
+- I am using [terraform](https://www.terraform.io/) and [terragrunt](https://terragrunt.gruntwork.io/) for expressing the infrastructure resources in AWS cloud.
 - `terraform` is used to express resources in the cloud using its `aws` provider whereas `terragrunt` is being used to keep the `terraform` code clean and dry of configuration.
 - I would be creating all resources, including VPC and subnets, routing and internet gateways, so that a dedicated, isolated environment can be established for the task.
 - `terragrunt` allows a single click deployment of all terraform code, using `terragrunt run-all apply` that can detect changes in the `terragrunt` configuration and apply the diff.
