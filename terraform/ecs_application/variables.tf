@@ -1,3 +1,16 @@
+variable "ecs_task_execution_role" {
+  type = object({
+    policy_document = object({
+      actions = list(string)
+      effect = string
+      type = string
+      identifiers = list(string)
+    })
+    iam_role_name = string
+    iam_policy_arn = string
+  })
+}
+
 variable "ecs_task" {
   type = object({
     family                   = string
@@ -28,4 +41,17 @@ variable "vpc_id" {
 
 variable "alb_arn" {
   type = string
+}
+
+variable "ecs_autoscale_role" {
+  type = object({
+    policy_document = object({
+      actions = list(string)
+      effect = string
+      type = string
+      identifiers = list(string)
+    })
+    iam_role_name = string
+    iam_policy_arn = string
+  })
 }

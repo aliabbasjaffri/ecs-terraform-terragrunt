@@ -1,26 +1,13 @@
-data "aws_iam_policy_document" "ecs_task_assume_role" {
-  statement {
-    actions = ["sts:AssumeRole"]
-
-    principals {
-      type        = "Service"
-      identifiers = ["ecs-tasks.amazonaws.com"]
-    }
+module "ecs_task_execution_role" {
+  source = "../service_role"
+  policy_document = {
+    actions = var.ecs_task_execution_role.policy_document.actions
+    effect = var.ecs_task_execution_role.policy_document.effect
+    type = var.ecs_task_execution_role.policy_document.type
+    identifiers = var.ecs_task_execution_role.policy_document.identifiers
   }
-}
-
-resource "aws_iam_role" "task_execution_role" {
-  name               = "task-execution-role"
-  assume_role_policy = data.aws_iam_policy_document.ecs_task_assume_role.json
-}
-
-data "aws_iam_policy" "ecs_task_execution_role" {
-  arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-}
-
-resource "aws_iam_role_policy_attachment" "ecs_task_execution_role" {
-  role       = aws_iam_role.task_execution_role.name
-  policy_arn = data.aws_iam_policy.ecs_task_execution_role.arn
+  iam_role_name = var.ecs_task_execution_role.iam_role_name
+  iam_policy_arn = var.ecs_task_execution_role.iam_policy_arn
 }
 
 ## --------------------------------------------------------------------------- ##
@@ -28,23 +15,20 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role" {
 resource "aws_ecs_task_definition" "ecs_task" {
   family                = var.ecs_task.family
   container_definitions = <<EOF
-  [
-    {
+  [{
     "name": "${var.ecs_task.container_image_name}",
     "image": "${var.ecs_task.container_image}",
-    "portMappings": [
-        {
-          "containerPort": 2368
-        }
-    ]}
-  ]
+    "portMappings": [{
+      "containerPort": ${var.ecs_task.container_image_port}
+    }]
+  }]
   EOF
 
   cpu                      = var.ecs_task.cpu
   memory                   = var.ecs_task.memory
   requires_compatibilities = var.ecs_task.requires_compatibilities
   network_mode             = var.ecs_task.network_mode
-  execution_role_arn       = aws_iam_role.task_execution_role.arn
+  execution_role_arn       = module.ecs_task_execution_role.iam_role_arn
 }
 
 resource "aws_ecs_service" "ecs_service" {
@@ -105,5 +89,60 @@ resource "aws_security_group" "ingress_api" {
     to_port     = var.ecs_task.container_image_port
     protocol    = "TCP"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+## --------------------------------------------------------------------------- ##
+
+module "ecs_autoscale_role" {
+  source = "../service_role"
+  policy_document = {
+    actions = var.ecs_autoscale_role.policy_document.actions
+    effect = var.ecs_autoscale_role.policy_document.effect
+    type = var.ecs_autoscale_role.policy_document.type
+    identifiers = var.ecs_autoscale_role.policy_document.identifiers
+  }
+  iam_role_name = var.ecs_autoscale_role.iam_role_name
+  iam_policy_arn = var.ecs_autoscale_role.iam_policy_arn
+}
+
+## --------------------------------------------------------------------------- ##
+
+resource "aws_appautoscaling_target" "ecs_target" {
+  min_capacity       = 1
+  max_capacity       = 4
+  resource_id        = "service/${var.ecs_service.cluster}/${aws_ecs_service.ecs_service.name}"
+  scalable_dimension = "ecs:service:DesiredCount"
+  service_namespace  = "ecs"
+  role_arn           = module.ecs_autoscale_role.iam_role_arn
+}
+
+resource "aws_appautoscaling_policy" "appautoscaling_policy_cpu" {
+  name               = "application-scale-policy-cpu"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.ecs_target.resource_id
+  scalable_dimension = aws_appautoscaling_target.ecs_target.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.ecs_target.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageCPUUtilization"
+    }
+    target_value = 80
+  }
+}
+
+resource "aws_appautoscaling_policy" "appautoscaling_policy_memory" {
+  name               = "application-scale-policy-memory"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = aws_appautoscaling_target.ecs_target.resource_id
+  scalable_dimension = aws_appautoscaling_target.ecs_target.scalable_dimension
+  service_namespace  = aws_appautoscaling_target.ecs_target.service_namespace
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = "ECSServiceAverageMemoryUtilization"
+    }
+    target_value = 80
   }
 }
